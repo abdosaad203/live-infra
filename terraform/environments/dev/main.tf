@@ -105,3 +105,14 @@ module "eks_production" {
     aws_iam_role_policy_attachment.ecr_policy
   ]
 }
+
+module "rds" {
+  source = "../../modules/rds"
+
+  vpc_id = module.vpc.vpc_id
+
+  private_subnet_ids = [
+    module.vpc.private_subnet_1_id,
+    module.vpc.private_subnet_2_id
+  ]
+}
