@@ -26,6 +26,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fix workspace permissions
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE || true
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -47,12 +51,12 @@ jobs:
 
       - name: Run tfsec
         continue-on-error: true
-        uses: aquasecurity/tfsec-action@v1.0.3
-        with:
-          working_directory: terraform/environments/dev
-          format: json
-          soft_fail: true
-          additional_args: --out tfsec-report.json
+        run: |
+          docker run --rm \
+            -v $(pwd):/src \
+            aquasec/tfsec /src \
+            --format json \
+            --out /src/tfsec-report.json
 
       - name: Upload tfsec report
         uses: actions/upload-artifact@v4
@@ -62,13 +66,12 @@ jobs:
 
       - name: Run Checkov
         continue-on-error: true
-        uses: bridgecrewio/checkov-action@master
-        with:
-          directory: terraform/environments/dev
-          framework: terraform
-          output_format: json
-          output_file_path: checkov-report.json
-          soft_fail: true
+        run: |
+          docker run --rm \
+            -v $(pwd):/tf \
+            bridgecrew/checkov \
+            -d /tf \
+            -o json > checkov-report.json
 
       - name: Upload checkov report
         uses: actions/upload-artifact@v4
@@ -78,13 +81,10 @@ jobs:
 
       - name: Run Trivy Config Scan
         continue-on-error: true
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: config
-          scan-ref: .
-          hide-progress: true
-          format: json
-          output: trivy-report.json
+        run: |
+          trivy config . \
+            --format json \
+            --output trivy-report.json
 
       - name: Upload trivy report
         uses: actions/upload-artifact@v4
@@ -93,6 +93,7 @@ jobs:
           path: terraform/environments/dev/trivy-report.json
 
       - name: Upload tfsec report to DefectDojo
+        continue-on-error: true
         run: |
           curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
@@ -103,6 +104,7 @@ jobs:
             -F "verified=true"
 
       - name: Upload checkov report to DefectDojo
+        continue-on-error: true
         run: |
           curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
@@ -113,6 +115,7 @@ jobs:
             -F "verified=true"
 
       - name: Upload trivy report to DefectDojo
+        continue-on-error: true
         run: |
           curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
             -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
