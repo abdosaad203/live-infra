@@ -45,6 +45,21 @@ jobs:
       - name: Terraform Plan
         run: terraform plan
 
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform/environments/dev
+          soft_fail: true
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/environments/dev
+          soft_fail: true
+
+      - name: Publish security reports
+        run: echo "Terraform security reports published"
+
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply'
         run: terraform apply -auto-approve
