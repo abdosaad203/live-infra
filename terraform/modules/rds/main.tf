@@ -1,3 +1,18 @@
+resource "random_password" "db_password" {
+  length  = 24
+  special = true
+}
+resource "aws_secretsmanager_secret" "db_secret" {
+  name = "ecommerce-db-credentials"
+}
+resource "aws_secretsmanager_secret_version" "db_secret_version" {
+  secret_id = aws_secretsmanager_secret.db_secret.id
+
+  secret_string = jsonencode({
+    username = var.db_username
+    password = random_password.db_password.result
+  })
+}
 resource "aws_db_subnet_group" "this" {
   name = "ecommerce-db-subnet-group"
 
@@ -39,7 +54,7 @@ resource "aws_db_instance" "this" {
 
   db_name  = var.db_name
   username = var.db_username
-  password = var.db_password
+  password = random_password.db_password.result
 
   publicly_accessible = false
   skip_final_snapshot = true

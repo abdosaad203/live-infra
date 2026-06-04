@@ -6,9 +6,6 @@ variable "db_username" {
   default = "admin"
 }
 
-variable "db_password" {
-  default = "Admin123!"
-}
 
 variable "private_subnet_ids" {
   type = list(string)
