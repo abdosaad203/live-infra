@@ -9,7 +9,7 @@
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "oidc.eks.us-east-1.amazonaws.com/id/B6F7EBF7FAAD0DC7CFB1EA6F169E2302:sub": "system:serviceaccount:external-secrets:external-secrets"
+          "oidc.eks.us-east-1.amazonaws.com/id/B6F7EBF7FAAD0DC7CFB1EA6F169E2302:sub": "system:serviceaccount:kube-system:ebs-csi-controller-sa"
         }
       }
     }

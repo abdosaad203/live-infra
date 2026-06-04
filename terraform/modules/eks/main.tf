@@ -4,6 +4,11 @@ resource "aws_eks_cluster" "this" {
 
   version = "1.31"
 
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
+
   vpc_config {
     subnet_ids = var.subnet_ids
   }
@@ -24,8 +29,8 @@ resource "aws_eks_node_group" "this" {
   instance_types = ["t3.small"]
 
   scaling_config {
-    desired_size = 2
-    max_size     = 3
+    desired_size = 1
+    max_size     = 2
     min_size     = 1
   }
 
