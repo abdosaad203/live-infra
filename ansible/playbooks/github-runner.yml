@@ -1,0 +1,112 @@
+---
+- name: Configure GitHub Self Hosted Runner
+  hosts: all
+  become: true
+
+  vars_files:
+    - ../vars/runner.yml
+
+  tasks:
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - git
+          - curl
+          - unzip
+          - jq
+        state: present
+
+    - name: Enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Install AWS CLI
+      shell: |
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+        unzip -o awscliv2.zip
+        ./aws/install --update
+      args:
+        creates: /usr/local/bin/aws
+
+    - name: Install kubectl
+      shell: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      args:
+        creates: /usr/local/bin/kubectl
+
+    - name: Install Helm
+      shell: |
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      args:
+        creates: /usr/local/bin/helm
+
+    - name: Install NodeJS
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt-get install -y nodejs
+      args:
+        creates: /usr/bin/node
+      
+    - name: Install .NET SDK 8
+      shell: |
+        wget https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+        dpkg -i packages-microsoft-prod.deb
+        apt-get update
+        apt-get install -y dotnet-sdk-8.0
+      args:
+        creates: /usr/bin/dotnet
+    
+    - name: Create actions runner directory
+      file:
+        path: /opt/actions-runner
+        state: directory
+
+    - name: Download GitHub runner
+      get_url:
+        url: https://github.com/actions/runner/releases/download/v2.325.0/actions-runner-linux-x64-2.325.0.tar.gz
+        dest: /tmp/actions-runner.tar.gz
+
+    - name: Extract runner
+      unarchive:
+        src: /tmp/actions-runner.tar.gz
+        dest: /opt/actions-runner
+        remote_src: yes
+
+    - name: Get registration token
+      uri:
+        url: "https://api.github.com/repos/abdosaad203/live-infra/actions/runners/registration-token"
+        method: POST
+        headers:
+          Authorization: "token {{ github_pat }}"
+          Accept: "application/vnd.github+json"
+        status_code: 201
+      register: runner_token
+
+    - name: Configure GitHub Runner
+      shell: |
+        cd /opt/actions-runner
+
+        ./config.sh \
+        --url https://github.com/abdosaad203/live-infra \
+        --token {{ runner_token.json.token }} \
+        --name $(hostname) \
+        --labels self-hosted,linux,ec2 \
+        --unattended \
+        --replace
+      args:
+        creates: /opt/actions-runner/.runner
+
+    - name: Install runner service
+      shell: |
+        cd /opt/actions-runner
+        ./svc.sh install
+        ./svc.sh start

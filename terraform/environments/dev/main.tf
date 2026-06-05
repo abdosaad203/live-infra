@@ -135,3 +135,31 @@ module "rds" {
     module.vpc.private_subnet_2_id
   ]
 }
+
+module "runner" {
+  source = "../../modules/runner"
+
+  vpc_id = module.vpc.vpc_id
+
+  subnet_ids = [
+    module.vpc.public_subnet_1_id,
+    module.vpc.public_subnet_2_id
+  ]
+
+  instance_type = "t3.large"
+
+  runner_count = 4
+
+  key_name = "depi-key"
+}
+
+resource "local_file" "ansible_inventory" {
+  content = templatefile(
+    "${path.module}/../../../ansible/inventory.tpl",
+    {
+      runner_ips = module.runner.public_ips
+    }
+  )
+
+  filename = "${path.module}/../../../ansible/inventory.ini"
+}
