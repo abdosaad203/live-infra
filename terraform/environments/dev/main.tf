@@ -163,3 +163,15 @@ resource "local_file" "ansible_inventory" {
 
   filename = "${path.module}/../../../ansible/inventory.ini"
 }
+
+resource "null_resource" "run_ansible" {
+
+  depends_on = [
+    module.runner,
+    local_file.ansible_inventory
+  ]
+
+  provisioner "local-exec" {
+    command = "sleep 120 && ansible-playbook -i ../../../ansible/inventory.ini ../../../ansible/playbooks/github-runner.yml"
+  }
+}

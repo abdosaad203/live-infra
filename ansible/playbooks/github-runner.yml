@@ -69,6 +69,9 @@
       file:
         path: /opt/actions-runner
         state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
 
     - name: Download GitHub runner
       get_url:
@@ -81,17 +84,33 @@
         dest: /opt/actions-runner
         remote_src: yes
 
+    - name: Fix runner permissions
+      file:
+        path: /opt/actions-runner
+        owner: ubuntu
+        group: ubuntu
+        recurse: yes
+
+    - name: Get GitHub PAT from AWS Secrets Manager
+      shell: |
+        aws secretsmanager get-secret-value \
+          --secret-id github-runner-pat \
+          --query SecretString \
+          --output text
+      register: github_pat
+
     - name: Get registration token
       uri:
         url: "https://api.github.com/repos/abdosaad203/live-infra/actions/runners/registration-token"
         method: POST
         headers:
-          Authorization: "token {{ github_pat }}"
+          Authorization: "token {{ github_pat.stdout }}"
           Accept: "application/vnd.github+json"
         status_code: 201
       register: runner_token
 
     - name: Configure GitHub Runner
+      become: false
       shell: |
         cd /opt/actions-runner
 
@@ -106,6 +125,7 @@
         creates: /opt/actions-runner/.runner
 
     - name: Install runner service
+      become: true
       shell: |
         cd /opt/actions-runner
         ./svc.sh install
