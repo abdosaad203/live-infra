@@ -40,6 +40,12 @@ jobs:
           role-to-assume: arn:aws:iam::526015996702:role/github-actions-terraform-role
           aws-region: us-east-1
 
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/depi-key.pem
+          chmod 600 ~/.ssh/depi-key.pem
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
