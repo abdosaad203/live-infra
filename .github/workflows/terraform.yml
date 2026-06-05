@@ -57,6 +57,7 @@ jobs:
         run: |
           docker run --rm \
             -v $(pwd):/src \
+            --user root \
             aquasec/tfsec /src \
             --format json \
             --out /src/tfsec-report.json
@@ -71,10 +72,10 @@ jobs:
         continue-on-error: true
         run: |
           docker run --rm \
-            -v $(pwd):/tf \
+            -v ${{ github.workspace }}:/tf \
             bridgecrew/checkov \
-            -d /tf \
-            -o json > checkov-report.json
+            -d /tf/terraform \
+            -o json > terraform/environments/dev/checkov-report.json
 
       - name: Upload checkov report
         uses: actions/upload-artifact@v4
@@ -85,9 +86,11 @@ jobs:
       - name: Run Trivy Config Scan
         continue-on-error: true
         run: |
-          trivy config . \
+          docker run --rm \
+            -v $(pwd):/work \
+            aquasec/trivy:latest config /work \
             --format json \
-            --output trivy-report.json
+            --output /work/trivy-report.json
 
       - name: Upload trivy report
         uses: actions/upload-artifact@v4
@@ -95,38 +98,38 @@ jobs:
           name: trivy-report
           path: terraform/environments/dev/trivy-report.json
 
-      - name: Upload tfsec report to DefectDojo
-        continue-on-error: true
-        run: |
-          curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
-            -F "scan_type=Tfsec Scan" \
-            -F "file=@tfsec-report.json" \
-            -F "active=true" \
-            -F "verified=true"
+      # - name: Upload tfsec report to DefectDojo
+      #   continue-on-error: true
+      #   run: |
+      #     curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+      #       -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+      #       -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
+      #       -F "scan_type=Tfsec Scan" \
+      #       -F "file=@tfsec-report.json" \
+      #       -F "active=true" \
+      #       -F "verified=true"
 
-      - name: Upload checkov report to DefectDojo
-        continue-on-error: true
-        run: |
-          curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
-            -F "scan_type=Checkov Scan" \
-            -F "file=@checkov-report.json" \
-            -F "active=true" \
-            -F "verified=true"
+      # - name: Upload checkov report to DefectDojo
+      #   continue-on-error: true
+      #   run: |
+      #     curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+      #       -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+      #       -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
+      #       -F "scan_type=Checkov Scan" \
+      #       -F "file=@checkov-report.json" \
+      #       -F "active=true" \
+      #       -F "verified=true"
 
-      - name: Upload trivy report to DefectDojo
-        continue-on-error: true
-        run: |
-          curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-            -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-            -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
-            -F "scan_type=Trivy Config Scan" \
-            -F "file=@trivy-report.json" \
-            -F "active=true" \
-            -F "verified=true"
+      # - name: Upload trivy report to DefectDojo
+      #   continue-on-error: true
+      #   run: |
+      #     curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
+      #       -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
+      #       -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
+      #       -F "scan_type=Trivy Config Scan" \
+      #       -F "file=@trivy-report.json" \
+      #       -F "active=true" \
+      #       -F "verified=true"
 
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply'
