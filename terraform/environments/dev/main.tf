@@ -83,7 +83,22 @@ module "eks_staging" {
     aws_iam_role_policy_attachment.ecr_policy
   ]
 }
+
+resource "aws_eks_access_entry" "ops1_staging" {
+  cluster_name  = module.eks_staging.cluster_name
+  principal_arn = "arn:aws:iam::526015996702:user/ops1"
+
+  depends_on = [
+    module.eks_staging
+  ]
+}
+
 resource "aws_eks_access_policy_association" "ops1_staging_admin" {
+
+  depends_on = [
+    aws_eks_access_entry.ops1_staging
+  ]
+
   cluster_name  = module.eks_staging.cluster_name
   principal_arn = "arn:aws:iam::526015996702:user/ops1"
 
@@ -115,7 +130,20 @@ module "eks_production" {
     aws_iam_role_policy_attachment.ecr_policy
   ]
 }
+
+resource "aws_eks_access_entry" "ops1_production" {
+  cluster_name  = module.eks_production.cluster_name
+  principal_arn = "arn:aws:iam::526015996702:user/ops1"
+
+  depends_on = [
+    module.eks_production
+  ]
+}
 resource "aws_eks_access_policy_association" "ops1_production_admin" {
+  depends_on = [
+    aws_eks_access_entry.ops1_production
+  ]
+
   cluster_name  = module.eks_production.cluster_name
   principal_arn = "arn:aws:iam::526015996702:user/ops1"
 
