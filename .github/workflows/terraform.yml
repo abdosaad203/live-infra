@@ -41,10 +41,23 @@ jobs:
           aws-region: us-east-1
 
       - name: Create SSH key
+        shell: bash
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/depi-key.pem
+
+          cat > ~/.ssh/depi-key.pem <<EOF
+          ${{ secrets.SSH_PRIVATE_KEY }}
+          EOF
+
           chmod 600 ~/.ssh/depi-key.pem
+
+          ssh-keygen -l -f ~/.ssh/depi-key.pem
+
+      - name: Verify SSH key
+        run: |
+          ls -la ~/.ssh
+          head -1 ~/.ssh/depi-key.pem
+          tail -1 ~/.ssh/depi-key.pem
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
