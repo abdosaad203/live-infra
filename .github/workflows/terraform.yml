@@ -75,7 +75,7 @@ jobs:
             -v ${{ github.workspace }}:/tf \
             bridgecrew/checkov \
             -d /tf/terraform \
-            -o json > terraform/environments/dev/checkov-report.json
+            -o json > checkov-report.json
 
       - name: Upload checkov report
         uses: actions/upload-artifact@v4
@@ -88,7 +88,8 @@ jobs:
         run: |
           docker run --rm \
             -v $(pwd):/work \
-            aquasec/trivy:latest config /work \
+            aquasec/trivy:latest \
+            config /work \
             --format json \
             --output /work/trivy-report.json
 
