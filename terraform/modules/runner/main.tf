@@ -107,6 +107,11 @@ resource "aws_instance" "runner" {
     aws_security_group.runner_sg.id
   ]
 
+  root_block_device {
+    volume_size = 30
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "github-runner-${count.index + 1}"
   }
