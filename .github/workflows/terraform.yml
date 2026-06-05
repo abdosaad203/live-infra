@@ -51,7 +51,7 @@ jobs:
 
           chmod 600 ~/.ssh/depi-key.pem
 
-          ssh-keygen -l -f ~/.ssh/depi-key.pem
+          ssh-keygen -y -f ~/.ssh/depi-key.pem > /dev/null
 
       - name: Verify SSH key
         run: |
