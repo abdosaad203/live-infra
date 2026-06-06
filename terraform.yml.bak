@@ -40,18 +40,6 @@ jobs:
           role-to-assume: arn:aws:iam::526015996702:role/github-actions-terraform-role
           aws-region: us-east-1
 
-      - name: Install kubectl
-        if: github.event.inputs.action == 'destroy'
-        uses: azure/setup-kubectl@v4
-
-      - name: Configure kubeconfig
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-          aws eks update-kubeconfig \
-            --region us-east-1 \
-            --name production-cluster
-
       - name: Create SSH key
         shell: bash
         run: |
@@ -166,66 +154,6 @@ jobs:
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply'
         run: terraform apply -auto-approve
-
-      - name: Pre-Destroy Cleanup
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-
-          echo "Deleting ArgoCD Applications ..."
-          kubectl delete applications --all -n argocd || true
-
-          echo "Deleting Ingresses ..."
-          kubectl delete ingress --all -A || true
-
-          echo "Waiting 120 seconds for ALB cleanup ..."
-          sleep 120
-
-      - name: Cleanup orphan ALBs
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-
-          for alb in $(aws elbv2 describe-load-balancers \
-            --query 'LoadBalancers[*].LoadBalancerArn' \
-            --output text); do
-
-            aws elbv2 delete-load-balancer \
-              --load-balancer-arn $alb || true
-          done
-          sleep 60
-
-      - name: Cleanup orphan Target Groups
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-
-          for tg in $(aws elbv2 describe-target-groups \
-            --query 'TargetGroups[*].TargetGroupArn' \
-            --output text); do
-
-            aws elbv2 delete-target-group \
-              --target-group-arn $tg || true
-
-          done
-
-      - name: Cleanup orphan Security Groups
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-
-          for sg in $(aws ec2 describe-security-groups \
-            --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' \
-            --output text); do
-
-            aws ec2 delete-security-group \
-              --group-id $sg || true
-          done
-
-      - name: Wait for AWS cleanup
-        if: github.event.inputs.action == 'destroy'
-        run: |
-          sleep 60
 
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
