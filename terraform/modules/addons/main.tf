@@ -12,6 +12,10 @@ terraform {
     kubernetes = {
       source = "hashicorp/kubernetes"
     }
+
+    time = {
+      source = "hashicorp/time"
+    }
   }
 }
 
@@ -111,7 +115,19 @@ resource "helm_release" "external_secrets" {
   ]
 }
 
+resource "time_sleep" "wait_for_argocd_crds" {
+
+  depends_on = [
+    helm_release.argocd
+  ]
+
+  create_duration = "90s"
+}
+
 resource "kubernetes_manifest" "root_app" {
+  depends_on = [
+    time_sleep.wait_for_argocd_crds
+  ]
 
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"
