@@ -167,6 +167,31 @@ jobs:
         if: github.event.inputs.action == 'apply'
         run: terraform apply -auto-approve
 
+      - name: Wait For Production EKS
+        if: github.event.inputs.action == 'apply'
+        run: |
+          aws eks wait cluster-active \
+            --name production-cluster
+
+      - name: Wait for Node Group readiness
+        if: github.event.inputs.action == 'apply'
+        run: sleep 180
+
+      - name: Terraform Init Addons
+        if: github.event.inputs.action == 'apply'
+        working-directory: terraform/environments/dev/addons
+        run: terraform init
+
+      - name: Terraform Validate Addons
+        if: github.event.inputs.action == 'apply'
+        working-directory: terraform/environments/dev/addons
+        run: terraform validate
+
+      - name: Terraform Apply Addons
+        if: github.event.inputs.action == 'apply'
+        working-directory: terraform/environments/dev/addons
+        run: terraform apply -auto-approve
+
       - name: Pre-Destroy Cleanup
         if: github.event.inputs.action == 'destroy'
         continue-on-error: true
@@ -221,6 +246,17 @@ jobs:
             aws ec2 delete-security-group \
               --group-id $sg || true
           done
+
+      - name: Terraform Init Addons Destroy
+        if: github.event.inputs.action == 'destroy'
+        working-directory: terraform/environments/dev/addons
+        run: terraform init
+
+      - name: Terraform Destroy Addons
+        if: github.event.inputs.action == 'destroy'
+        continue-on-error: true
+        working-directory: terraform/environments/dev/addons
+        run: terraform destroy -auto-approve
 
       - name: Wait for AWS cleanup
         if: github.event.inputs.action == 'destroy'

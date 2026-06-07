@@ -37,3 +37,7 @@ output "production_cluster_ca" {
 output "production_oidc_issuer" {
   value = module.eks_production.oidc_issuer
 }
+
+output "vpc_id" {
+  value = module.vpc.vpc_id
+}
