@@ -125,10 +125,6 @@ resource "time_sleep" "wait_for_argocd_crds" {
 }
 
 resource "kubernetes_manifest" "root_app" {
-  depends_on = [
-    time_sleep.wait_for_argocd_crds
-  ]
-
   manifest = {
     apiVersion = "argoproj.io/v1alpha1"
     kind       = "Application"
@@ -163,7 +159,8 @@ resource "kubernetes_manifest" "root_app" {
   }
 
   depends_on = [
-    helm_release.argocd
+    helm_release.argocd,
+    time_sleep.wait_for_argocd_crds
   ]
 }
 
