@@ -12,6 +12,10 @@ terraform {
     kubernetes = {
       source = "hashicorp/kubernetes"
     }
+    
+    time = {
+      source = "hashicorp/time"
+    }
   }
 }
 
@@ -90,6 +94,59 @@ resource "aws_iam_role_policy" "external_secrets" {
   })
 }
 
+resource "helm_release" "aws_load_balancer_controller" {
+
+  name = "aws-load-balancer-controller"
+
+  repository = "https://aws.github.io/eks-charts"
+
+  chart = "aws-load-balancer-controller"
+
+  namespace = kubernetes_namespace.aws_load_balancer_controller.metadata[0].name
+
+  create_namespace = false
+
+  set {
+    name  = "clusterName"
+    value = var.cluster_name
+  }
+
+  set {
+    name  = "region"
+    value = "us-east-1"
+  }
+
+  set {
+    name  = "vpcId"
+    value = var.vpc_id
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "false"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
+
+  depends_on = [
+    kubernetes_namespace.aws_load_balancer_controller,
+    kubernetes_service_account.aws_load_balancer_controller,
+    aws_iam_role_policy_attachment.aws_load_balancer_controller
+  ]
+}
+
+resource "time_sleep" "wait_for_alb_controller" {
+
+  depends_on = [
+    helm_release.aws_load_balancer_controller
+  ]
+
+  create_duration = "60s"
+}
+
 resource "helm_release" "external_secrets" {
 
   name       = "external-secrets"
@@ -107,7 +164,8 @@ resource "helm_release" "external_secrets" {
 
   depends_on = [
     kubernetes_namespace.external_secrets,
-    aws_iam_role_policy.external_secrets
+    aws_iam_role_policy.external_secrets,
+    time_sleep.wait_for_alb_controller
   ]
 }
 
@@ -214,48 +272,4 @@ resource "kubernetes_service_account" "aws_load_balancer_controller" {
       "eks.amazonaws.com/role-arn" = aws_iam_role.aws_load_balancer_controller.arn
     }
   }
-}
-
-resource "helm_release" "aws_load_balancer_controller" {
-
-  name = "aws-load-balancer-controller"
-
-  repository = "https://aws.github.io/eks-charts"
-
-  chart = "aws-load-balancer-controller"
-
-  namespace = kubernetes_namespace.aws_load_balancer_controller.metadata[0].name
-
-  create_namespace = false
-
-  set {
-    name  = "clusterName"
-    value = var.cluster_name
-  }
-
-  set {
-    name  = "region"
-    value = "us-east-1"
-  }
-
-  set {
-    name  = "vpcId"
-    value = var.vpc_id
-  }
-
-  set {
-    name  = "serviceAccount.create"
-    value = "false"
-  }
-
-  set {
-    name  = "serviceAccount.name"
-    value = "aws-load-balancer-controller"
-  }
-
-  depends_on = [
-    kubernetes_namespace.aws_load_balancer_controller,
-    kubernetes_service_account.aws_load_balancer_controller,
-    aws_iam_role_policy_attachment.aws_load_balancer_controller
-  ]
 }
