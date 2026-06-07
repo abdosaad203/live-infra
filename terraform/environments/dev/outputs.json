@@ -1,0 +1,38 @@
+{
+  "runner_private_ips": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string",
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "10.0.1.166",
+      "10.0.2.143",
+      "10.0.1.27",
+      "10.0.2.25"
+    ]
+  },
+  "runner_public_ips": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string",
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "98.92.228.64",
+      "174.129.178.222",
+      "100.54.20.131",
+      "44.204.161.255"
+    ]
+  }
+}
