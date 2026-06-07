@@ -41,11 +41,9 @@ jobs:
           aws-region: us-east-1
 
       - name: Install kubectl
-        if: github.event.inputs.action == 'destroy'
         uses: azure/setup-kubectl@v4
 
       - name: Configure kubeconfig
-        if: github.event.inputs.action == 'destroy'
         continue-on-error: true
         run: |
           aws eks update-kubeconfig \
@@ -191,6 +189,21 @@ jobs:
         if: github.event.inputs.action == 'apply'
         working-directory: terraform/environments/dev/addons
         run: terraform apply -auto-approve
+
+      - name: Wait For ArgoCD
+        if: github.event.inputs.action == 'apply'
+        run: |
+          kubectl wait \
+            --namespace argocd \
+            --for=condition=available deployment \
+            --all \
+            --timeout=300s
+
+      - name: Apply Root Application
+        if: github.event.inputs.action == 'apply'
+        run: |
+          kubectl apply -f \
+          https://raw.githubusercontent.com/abdosaad203/ecommerce-gitops/main/argo-apps/bootstrap/root-app.yaml
 
       - name: Pre-Destroy Cleanup
         if: github.event.inputs.action == 'destroy'

@@ -12,10 +12,6 @@ terraform {
     kubernetes = {
       source = "hashicorp/kubernetes"
     }
-
-    time = {
-      source = "hashicorp/time"
-    }
   }
 }
 
@@ -112,55 +108,6 @@ resource "helm_release" "external_secrets" {
   depends_on = [
     kubernetes_namespace.external_secrets,
     aws_iam_role_policy.external_secrets
-  ]
-}
-
-resource "time_sleep" "wait_for_argocd_crds" {
-
-  depends_on = [
-    helm_release.argocd
-  ]
-
-  create_duration = "90s"
-}
-
-resource "kubernetes_manifest" "root_app" {
-  manifest = {
-    apiVersion = "argoproj.io/v1alpha1"
-    kind       = "Application"
-
-    metadata = {
-      name      = "production-root"
-      namespace = "argocd"
-    }
-
-    spec = {
-
-      project = "default"
-
-      source = {
-        repoURL        = "https://github.com/abdosaad203/ecommerce-gitops.git"
-        targetRevision = "main"
-        path           = "argo-apps/production"
-      }
-
-      destination = {
-        server    = "https://kubernetes.default.svc"
-        namespace = "argocd"
-      }
-
-      syncPolicy = {
-        automated = {
-          prune    = true
-          selfHeal = true
-        }
-      }
-    }
-  }
-
-  depends_on = [
-    helm_release.argocd,
-    time_sleep.wait_for_argocd_crds
   ]
 }
 
