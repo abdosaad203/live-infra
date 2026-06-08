@@ -219,6 +219,32 @@ jobs:
           echo "Waiting 120 seconds for ALB cleanup ..."
           sleep 120
 
+      - name: Terraform Init Addons Destroy
+        if: github.event.inputs.action == 'destroy'
+        working-directory: terraform/environments/dev/addons
+        run: terraform init
+
+      - name: Reconfigure kubeconfig destroy
+        if: github.event.inputs.action == 'destroy'
+        continue-on-error: true
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name production-cluster
+
+      - name: Terraform Destroy Addons
+        if: github.event.inputs.action == 'destroy'
+        working-directory: terraform/environments/dev/addons
+        run: |
+          terraform destroy \
+            -auto-approve \
+            -lock=false
+
+      - name: Wait for addons cleanup
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          sleep 180
+
       - name: Cleanup orphan ALBs
         if: github.event.inputs.action == 'destroy'
         continue-on-error: true
@@ -259,28 +285,24 @@ jobs:
               --group-id $sg || true
           done
 
-      - name: Terraform Init Addons Destroy
-        if: github.event.inputs.action == 'destroy'
-        working-directory: terraform/environments/dev/addons
-        run: terraform init
-
-      - name: Reconfigure kubeconfig destroy
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-          aws eks update-kubeconfig \
-            --region us-east-1 \
-            --name production-cluster
-
-      - name: Terraform Destroy Addons
-        if: github.event.inputs.action == 'destroy'
-        working-directory: terraform/environments/dev/addons
-        run: terraform destroy -auto-approve
-
-      - name: Wait for AWS cleanup
+      - name: Wait until no Load Balancers remain
         if: github.event.inputs.action == 'destroy'
         run: |
-          sleep 180
+          for i in {1..20}; do
+
+            COUNT=$(aws elbv2 describe-load-balancers \
+              --query 'length(LoadBalancers)' \
+              --output text)
+
+            echo "Remaining ALBs: $COUNT"
+
+            if [ "$COUNT" = "0" ]; then
+              exit 0
+            fi
+
+            sleep 30
+
+          done
 
       - name: Wait until no k8s security groups remain
         if: github.event.inputs.action == 'destroy'
@@ -301,25 +323,11 @@ jobs:
             sleep 30
           done
     
-      - name: Wait until no Load Balancers remain
+      - name: Wait for AWS cleanup
         if: github.event.inputs.action == 'destroy'
         run: |
-          for i in {1..20}; do
+          sleep 100
 
-            COUNT=$(aws elbv2 describe-load-balancers \
-              --query 'length(LoadBalancers)' \
-              --output text)
-
-            echo "Remaining ALBs: $COUNT"
-
-            if [ "$COUNT" = "0" ]; then
-              exit 0
-            fi
-
-            sleep 30
-
-          done
-    
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
         run: terraform destroy -auto-approve

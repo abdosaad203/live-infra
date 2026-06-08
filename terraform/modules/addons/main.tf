@@ -38,6 +38,9 @@ resource "helm_release" "argocd" {
   chart      = "argo-cd"
 
   namespace = kubernetes_namespace.argocd.metadata[0].name
+  wait    = true
+  timeout = 900
+  cleanup_on_fail = true
 
   create_namespace = false
 
@@ -103,6 +106,9 @@ resource "helm_release" "aws_load_balancer_controller" {
   chart = "aws-load-balancer-controller"
 
   namespace = kubernetes_namespace.aws_load_balancer_controller.metadata[0].name
+  wait    = true
+  timeout = 900
+  cleanup_on_fail = true
 
   create_namespace = false
 
@@ -154,6 +160,9 @@ resource "helm_release" "external_secrets" {
   chart      = "external-secrets"
 
   namespace = kubernetes_namespace.external_secrets.metadata[0].name
+  wait    = true
+  timeout = 900
+  cleanup_on_fail = true
 
   create_namespace = false
 
