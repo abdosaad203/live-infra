@@ -43,13 +43,6 @@ jobs:
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
 
-      - name: Configure kubeconfig
-        continue-on-error: true
-        run: |
-          aws eks update-kubeconfig \
-            --region us-east-1 \
-            --name production-cluster
-
       - name: Create SSH key
         shell: bash
         run: |
@@ -271,9 +264,16 @@ jobs:
         working-directory: terraform/environments/dev/addons
         run: terraform init
 
-      - name: Terraform Destroy Addons
+      - name: Reconfigure kubeconfig destroy
         if: github.event.inputs.action == 'destroy'
         continue-on-error: true
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name production-cluster
+
+      - name: Terraform Destroy Addons
+        if: github.event.inputs.action == 'destroy'
         working-directory: terraform/environments/dev/addons
         run: terraform destroy -auto-approve
 
@@ -300,7 +300,26 @@ jobs:
             fi
             sleep 30
           done
-          
+    
+      - name: Wait until no Load Balancers remain
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          for i in {1..20}; do
+
+            COUNT=$(aws elbv2 describe-load-balancers \
+              --query 'length(LoadBalancers)' \
+              --output text)
+
+            echo "Remaining ALBs: $COUNT"
+
+            if [ "$COUNT" = "0" ]; then
+              exit 0
+            fi
+
+            sleep 30
+
+          done
+    
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
         run: terraform destroy -auto-approve
