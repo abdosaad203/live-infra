@@ -1,0 +1,71 @@
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0b0bc651039378162",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "Tags": [
+                {
+                    "Key": "elbv2.k8s.aws/cluster",
+                    "Value": "production-cluster"
+                },
+                {
+                    "Key": "elbv2.k8s.aws/resource",
+                    "Value": "backend-sg"
+                }
+            ],
+            "VpcId": "vpc-08d4310aac40f311b",
+            "SecurityGroupArn": "arn:aws:ec2:us-east-1:526015996702:security-group/sg-0b0bc651039378162",
+            "OwnerId": "526015996702",
+            "GroupName": "k8s-traffic-productioncluster-353f1be6c3",
+            "Description": "[k8s] Shared Backend SecurityGroup for LoadBalancer",
+            "IpPermissions": []
+        },
+        {
+            "GroupId": "sg-09c81e4a3237a4a1d",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-08d4310aac40f311b",
+            "SecurityGroupArn": "arn:aws:ec2:us-east-1:526015996702:security-group/sg-09c81e4a3237a4a1d",
+            "OwnerId": "526015996702",
+            "GroupName": "default",
+            "Description": "default VPC security group",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [
+                        {
+                            "UserId": "526015996702",
+                            "GroupId": "sg-09c81e4a3237a4a1d"
+                        }
+                    ],
+                    "IpRanges": [],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        }
+    ]
+}
