@@ -43,6 +43,13 @@ jobs:
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Configure kubeconfig
+        continue-on-error: true
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name production-cluster
+
       - name: Create SSH key
         shell: bash
         run: |
@@ -164,7 +171,7 @@ jobs:
           aws eks wait cluster-active \
             --name production-cluster
 
-      - name: configure kubeconfig
+      - name: Reconfigure kubeconfig
         if: github.event.inputs.action == 'apply'
         run: |
           aws eks update-kubeconfig \
@@ -251,9 +258,8 @@ jobs:
         if: github.event.inputs.action == 'destroy'
         continue-on-error: true
         run: |
-
           for sg in $(aws ec2 describe-security-groups \
-            --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' \
+            --query 'SecurityGroups[?contains(GroupName, `k8s-`)].GroupId' \
             --output text); do
 
             aws ec2 delete-security-group \
@@ -274,8 +280,27 @@ jobs:
       - name: Wait for AWS cleanup
         if: github.event.inputs.action == 'destroy'
         run: |
-          sleep 60
+          sleep 180
 
+      - name: Wait until no k8s security groups remain
+        if: github.event.inputs.action == 'destroy'
+        continue-on-error: true
+        run: |
+          for i in {1..12}; do
+
+            COUNT=$(aws ec2 describe-security-groups \
+              --query 'length(SecurityGroups[?contains(GroupName, `k8s-`)])' \
+              --output text)
+
+            echo "Remaining k8s SGs: $COUNT"
+
+            if [ "$COUNT" = "0" ]; then
+              echo "All k8s security groups removed"
+              exit 0
+            fi
+            sleep 30
+          done
+          
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
         run: terraform destroy -auto-approve
