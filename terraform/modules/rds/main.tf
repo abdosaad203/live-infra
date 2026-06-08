@@ -16,6 +16,57 @@ resource "aws_secretsmanager_secret_version" "db_secret_version" {
     password = random_password.db_password.result
   })
 }
+resource "aws_secretsmanager_secret" "db_user" {
+  name                    = "ecommerce-db-user"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "db_user_version" {
+  secret_id     = aws_secretsmanager_secret.db_user.id
+  secret_string = var.db_username
+}
+
+resource "aws_secretsmanager_secret" "db_pass" {
+  name                    = "ecommerce-db-pass"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "db_pass_version" {
+  secret_id     = aws_secretsmanager_secret.db_pass.id
+  secret_string = random_password.db_password.result
+}
+
+resource "aws_secretsmanager_secret" "db_name" {
+  name                    = "ecommerce-db-name"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "db_name_version" {
+  secret_id     = aws_secretsmanager_secret.db_name.id
+  secret_string = var.db_name
+}
+
+resource "aws_secretsmanager_secret" "db_connection" {
+  name                    = "ecommerce-db-connection"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "db_connection_version" {
+  depends_on = [aws_db_instance.this]
+  secret_id = aws_secretsmanager_secret.db_connection.id
+
+  secret_string = "server=${aws_db_instance.this.address};port=3306;database=${var.db_name};user=${var.db_username};password=${random_password.db_password.result}"
+}
+resource "aws_secretsmanager_secret" "db_host" {
+  name                    = "ecommerce-db-host"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "db_host_version" {
+  depends_on = [aws_db_instance.this]
+  secret_id     = aws_secretsmanager_secret.db_host.id
+  secret_string = aws_db_instance.this.address
+}
 
 resource "aws_db_subnet_group" "this" {
   name = "ecommerce-db-subnet-group"
