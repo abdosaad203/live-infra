@@ -1,0 +1,19 @@
+name: Runner Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on:
+      - self-hosted
+
+    steps:
+      - name: Check Runner
+        run: |
+          hostname
+          docker --version
+          kubectl version --client
+          helm version
+          aws --version
+          node --version
