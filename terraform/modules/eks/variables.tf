@@ -15,7 +15,9 @@ variable "subnet_ids" {
 }
 
 variable "cluster_role_dependency" {
+  type = any
 }
 
 variable "node_role_dependency" {
+  type = any
 }

@@ -19,3 +19,7 @@ variable "runner_count" {
 variable "key_name" {
   type = string
 }
+
+variable "environment" {
+  type = string
+}

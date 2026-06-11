@@ -1,4 +1,3 @@
 github_repo: "abdosaad203/live-infra"
 runner_labels: "self-hosted,linux,ec2"
 runner_name_prefix: "liveinfra-runner"
-github_pat: "{{ lookup('env','GH_RUNNER_PAT') }}"

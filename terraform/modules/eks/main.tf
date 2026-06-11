@@ -28,6 +28,8 @@ resource "aws_eks_node_group" "this" {
 
   instance_types = ["t3.large"]
 
+  capacity_type = "ON_DEMAND"
+
   scaling_config {
     desired_size = 2
     max_size     = 3
@@ -37,5 +39,22 @@ resource "aws_eks_node_group" "this" {
   depends_on = [
     aws_eks_cluster.this,
     var.node_role_dependency
+  ]
+}
+
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.this.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "this" {
+
+  url = aws_eks_cluster.this.identity[0].oidc[0].issuer
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  thumbprint_list = [
+    data.tls_certificate.eks.certificates[0].sha1_fingerprint
   ]
 }

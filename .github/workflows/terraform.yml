@@ -1,12 +1,21 @@
-name: Terraform Pipeline
+name: Terraform Infrastructure
 
 on:
   workflow_dispatch:
     inputs:
-      action:
-        description: "Terraform action"
+      environment:
+        description: "Environment"
         required: true
-        default: "apply"
+        type: choice
+        options:
+          - shared
+          - staging
+          - production
+
+      action:
+        description: "Terraform Action"
+        required: true
+        default: apply
         type: choice
         options:
           - apply
@@ -19,48 +28,25 @@ permissions:
 jobs:
 
   terraform:
-    runs-on: ubuntu-latest
+
+    runs-on:
+      - self-hosted
+      - linux
 
     defaults:
       run:
-        working-directory: terraform/environments/dev
+        working-directory: terraform/environments/${{ github.event.inputs.environment }}
 
     steps:
 
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Fix workspace permissions
-        run: |
-          sudo chown -R $USER:$USER $GITHUB_WORKSPACE || true
-
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::526015996702:role/github-actions-terraform-role
           aws-region: us-east-1
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Create SSH key
-        shell: bash
-        run: |
-          mkdir -p ~/.ssh
-
-          cat > ~/.ssh/depi-key.pem <<EOF
-          ${{ secrets.SSH_PRIVATE_KEY }}
-          EOF
-
-          chmod 600 ~/.ssh/depi-key.pem
-
-          ssh-keygen -y -f ~/.ssh/depi-key.pem > /dev/null
-
-      - name: Verify SSH key
-        run: |
-          ls -la ~/.ssh
-          head -1 ~/.ssh/depi-key.pem
-          tail -1 ~/.ssh/depi-key.pem
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -74,266 +60,9 @@ jobs:
       - name: Terraform Plan
         run: terraform plan
 
-      - name: Run tfsec
-        continue-on-error: true
-        run: |
-          docker run --rm \
-            -v $(pwd):/src \
-            --user root \
-            aquasec/tfsec /src \
-            --format json \
-            --out /src/tfsec-report.json
-
-      - name: Upload tfsec report
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfsec-report
-          path: terraform/environments/dev/tfsec-report.json
-
-      - name: Run Checkov
-        continue-on-error: true
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/tf \
-            bridgecrew/checkov \
-            -d /tf/terraform \
-            -o json > checkov-report.json
-
-      - name: Upload checkov report
-        uses: actions/upload-artifact@v4
-        with:
-          name: checkov-report
-          path: terraform/environments/dev/checkov-report.json
-
-      - name: Run Trivy Config Scan
-        continue-on-error: true
-        run: |
-          docker run --rm \
-            -v $(pwd):/work \
-            aquasec/trivy:latest \
-            config /work \
-            --format json \
-            --output /work/trivy-report.json
-
-      - name: Upload trivy report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-report
-          path: terraform/environments/dev/trivy-report.json
-
-      # - name: Upload tfsec report to DefectDojo
-      #   continue-on-error: true
-      #   run: |
-      #     curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-      #       -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-      #       -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
-      #       -F "scan_type=Tfsec Scan" \
-      #       -F "file=@tfsec-report.json" \
-      #       -F "active=true" \
-      #       -F "verified=true"
-
-      # - name: Upload checkov report to DefectDojo
-      #   continue-on-error: true
-      #   run: |
-      #     curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-      #       -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-      #       -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
-      #       -F "scan_type=Checkov Scan" \
-      #       -F "file=@checkov-report.json" \
-      #       -F "active=true" \
-      #       -F "verified=true"
-
-      # - name: Upload trivy report to DefectDojo
-      #   continue-on-error: true
-      #   run: |
-      #     curl -X POST "${{ secrets.DEFECTDOJO_URL }}/api/v2/import-scan/" \
-      #       -H "Authorization: Token ${{ secrets.DEFECTDOJO_API_KEY }}" \
-      #       -F "engagement=${{ secrets.DEFECTDOJO_ENGAGEMENT_ID }}" \
-      #       -F "scan_type=Trivy Config Scan" \
-      #       -F "file=@trivy-report.json" \
-      #       -F "active=true" \
-      #       -F "verified=true"
-
       - name: Terraform Apply
         if: github.event.inputs.action == 'apply'
         run: terraform apply -auto-approve
-
-      - name: Wait For Production EKS
-        if: github.event.inputs.action == 'apply'
-        run: |
-          aws eks wait cluster-active \
-            --name production-cluster
-
-      - name: Reconfigure kubeconfig
-        if: github.event.inputs.action == 'apply'
-        run: |
-          aws eks update-kubeconfig \
-            --region us-east-1 \
-            --name production-cluster
-
-      - name: Wait for Node Group readiness
-        if: github.event.inputs.action == 'apply'
-        run: sleep 180
-
-      - name: Terraform Init Addons
-        if: github.event.inputs.action == 'apply'
-        working-directory: terraform/environments/dev/addons
-        run: terraform init
-
-      - name: Terraform Validate Addons
-        if: github.event.inputs.action == 'apply'
-        working-directory: terraform/environments/dev/addons
-        run: terraform validate
-
-      - name: Terraform Apply Addons
-        if: github.event.inputs.action == 'apply'
-        working-directory: terraform/environments/dev/addons
-        run: terraform apply -auto-approve
-
-      - name: Wait For ArgoCD
-        if: github.event.inputs.action == 'apply'
-        run: |
-          kubectl wait \
-            --namespace argocd \
-            --for=condition=available deployment \
-            --all \
-            --timeout=300s
-
-      - name: Apply Root Application
-        if: github.event.inputs.action == 'apply'
-        run: |
-          kubectl apply -f \
-          https://raw.githubusercontent.com/abdosaad203/ecommerce-gitops/main/argo-apps/bootstrap/root-app.yaml
-
-      - name: Pre-Destroy Cleanup
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-
-          echo "Deleting ArgoCD Applications ..."
-          kubectl delete applications.argoproj.io --all -n argocd || true
-
-          echo "Deleting Ingresses ..."
-          kubectl delete ingress --all -A || true
-
-          echo "Waiting 120 seconds for ALB cleanup ..."
-          sleep 120
-
-      - name: Terraform Init Addons Destroy
-        if: github.event.inputs.action == 'destroy'
-        working-directory: terraform/environments/dev/addons
-        run: terraform init
-
-      - name: Reconfigure kubeconfig destroy
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-          aws eks update-kubeconfig \
-            --region us-east-1 \
-            --name production-cluster
-
-      - name: Terraform Destroy Addons
-        if: github.event.inputs.action == 'destroy'
-        working-directory: terraform/environments/dev/addons
-        run: |
-          terraform destroy \
-            -auto-approve \
-            -lock=false
-
-      - name: Wait for addons cleanup
-        if: github.event.inputs.action == 'destroy'
-        run: |
-          sleep 180
-
-      - name: Cleanup orphan ALBs
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-
-          for alb in $(aws elbv2 describe-load-balancers \
-            --query 'LoadBalancers[*].LoadBalancerArn' \
-            --output text); do
-
-            aws elbv2 delete-load-balancer \
-              --load-balancer-arn $alb || true
-          done
-          sleep 60
-
-      - name: Cleanup orphan Target Groups
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-
-          for tg in $(aws elbv2 describe-target-groups \
-            --query 'TargetGroups[*].TargetGroupArn' \
-            --output text); do
-
-            aws elbv2 delete-target-group \
-              --target-group-arn $tg || true
-
-          done
-
-      - name: Cleanup orphan Security Groups
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-
-          for i in {1..10}; do
-
-            for sg in $(aws ec2 describe-security-groups \
-              --query 'SecurityGroups[?contains(GroupName, `k8s-`)].GroupId' \
-              --output text); do
-
-              aws ec2 delete-security-group \
-                --group-id $sg || true
-
-            done
-
-            sleep 30
-          done
-
-      - name: Wait until no Load Balancers remain
-        if: github.event.inputs.action == 'destroy'
-        run: |
-          for i in {1..20}; do
-
-            COUNT=$(aws elbv2 describe-load-balancers \
-              --query 'length(LoadBalancers)' \
-              --output text)
-
-            echo "Remaining ALBs: $COUNT"
-
-            if [ "$COUNT" = "0" ]; then
-              exit 0
-            fi
-
-            sleep 30
-
-          done
-
-      - name: Wait until no k8s security groups remain
-        if: github.event.inputs.action == 'destroy'
-        continue-on-error: true
-        run: |
-          for i in {1..12}; do
-
-            COUNT=$(aws ec2 describe-security-groups \
-              --query 'length(SecurityGroups[?contains(GroupName, `k8s-`)])' \
-              --output text)
-
-            echo "Remaining k8s SGs: $COUNT"
-
-            if [ "$COUNT" = "0" ]; then
-              echo "All k8s security groups removed"
-              exit 0
-            fi
-            sleep 30
-          done
-    
-      - name: Wait for AWS cleanup
-        if: github.event.inputs.action == 'destroy'
-        run: |
-          sleep 180
 
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
