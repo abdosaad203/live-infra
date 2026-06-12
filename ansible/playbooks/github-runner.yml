@@ -128,6 +128,9 @@
       shell: |
         cd /opt/actions-runner
         ./svc.sh install
+      args:
+        creates: /etc/systemd/system/actions.runner.{{ github_repo | replace('/', '-') }}.service
+      ignore_errors: true
 
     - name: Start runner service
       shell: |

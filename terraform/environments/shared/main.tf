@@ -30,3 +30,30 @@ resource "local_file" "ansible_inventory" {
 
   filename = "${path.root}/../../../ansible/inventory.ini"
 }
+
+resource "time_sleep" "wait_for_runners" {
+
+  depends_on = [
+    module.runner
+  ]
+
+  create_duration = "180s"
+}
+
+resource "null_resource" "configure_runners" {
+
+  depends_on = [
+    local_file.ansible_inventory,
+    time_sleep.wait_for_runners
+  ]
+
+  provisioner "local-exec" {
+
+    command = <<EOT
+      ansible-playbook \
+      -i ${path.root}/../../../ansible/inventory.ini \
+      ${path.root}/../../../ansible/playbooks/github-runner.yml
+      EOT
+
+  }
+}
