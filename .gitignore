@@ -4,3 +4,8 @@
 crash.log
 terraform.tfvars
 *.backup
+*.tfplan
+plan.txt
+outputs.json
+graph.dot
+resources-before-destroy.txt

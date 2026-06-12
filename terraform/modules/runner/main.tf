@@ -10,8 +10,8 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_security_group" "runner_sg" {
-  name_prefix = "github-runner-sg"
-  vpc_id      = var.vpc_id
+  name   = "${var.environment}-runner-sg"
+  vpc_id = var.vpc_id
 
   ingress {
     from_port   = 22
@@ -28,15 +28,16 @@ resource "aws_security_group" "runner_sg" {
   }
 
   tags = {
-    Name = "github-runner-sg"
+    Name = "${var.environment}-runner-sg"
   }
 }
 
 resource "aws_iam_role" "runner_role" {
-  name = "github-runner-role"
+  name = "${var.environment}-runner-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
+
     Statement = [
       {
         Effect = "Allow"
@@ -62,7 +63,7 @@ resource "aws_iam_role_policy_attachment" "ecr" {
 }
 
 resource "aws_iam_role_policy" "secrets_access" {
-  name = "github-runner-secrets-access"
+  name = "${var.environment}-runner-secrets-access"
   role = aws_iam_role.runner_role.id
 
   policy = jsonencode({
@@ -83,7 +84,7 @@ resource "aws_iam_role_policy" "secrets_access" {
 }
 
 resource "aws_iam_instance_profile" "runner_profile" {
-  name = "github-runner-profile"
+  name = "${var.environment}-runner-profile"
   role = aws_iam_role.runner_role.name
 }
 
@@ -113,6 +114,6 @@ resource "aws_instance" "runner" {
   }
 
   tags = {
-    Name = "github-runner-${count.index + 1}"
+    Name = "${var.environment}-runner-${count.index + 1}"
   }
 }

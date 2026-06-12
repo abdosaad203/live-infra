@@ -1,6 +1,6 @@
 ---
 - name: Configure GitHub Self Hosted Runner
-  hosts: all
+  hosts: github_runners
   become: true
 
   vars_files:
@@ -55,7 +55,7 @@
         apt-get install -y nodejs
       args:
         creates: /usr/bin/node
-      
+
     - name: Install .NET SDK 8
       shell: |
         wget https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
@@ -64,14 +64,14 @@
         apt-get install -y dotnet-sdk-8.0
       args:
         creates: /usr/bin/dotnet
-    
+
     - name: Create actions runner directory
       file:
         path: /opt/actions-runner
         state: directory
         owner: ubuntu
         group: ubuntu
-        mode: '0755'
+        mode: "0755"
 
     - name: Download GitHub runner
       get_url:
@@ -101,7 +101,7 @@
 
     - name: Get registration token
       uri:
-        url: "https://api.github.com/repos/abdosaad203/live-infra/actions/runners/registration-token"
+        url: "https://api.github.com/repos/{{ github_repo }}/actions/runners/registration-token"
         method: POST
         headers:
           Authorization: "token {{ github_pat.stdout }}"
@@ -115,18 +115,24 @@
         cd /opt/actions-runner
 
         ./config.sh \
-        --url https://github.com/abdosaad203/live-infra \
+        --url https://github.com/{{ github_repo }} \
         --token {{ runner_token.json.token }} \
         --name $(hostname) \
-        --labels self-hosted,linux,ec2 \
+        --labels {{ runner_labels }} \
         --unattended \
         --replace
       args:
         creates: /opt/actions-runner/.runner
 
     - name: Install runner service
-      become: true
       shell: |
         cd /opt/actions-runner
         ./svc.sh install
+      args:
+        creates: /etc/systemd/system/actions.runner.{{ github_repo | replace('/', '-') }}.service
+      ignore_errors: true
+
+    - name: Start runner service
+      shell: |
+        cd /opt/actions-runner
         ./svc.sh start

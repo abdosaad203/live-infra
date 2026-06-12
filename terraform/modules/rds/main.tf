@@ -4,7 +4,7 @@ resource "random_password" "db_password" {
 }
 
 resource "aws_secretsmanager_secret" "db_secret" {
-  name                    = "ecommerce-db-credentials"
+  name                    = "${var.environment}-db-credentials"
   recovery_window_in_days = 0
 }
 
@@ -16,8 +16,9 @@ resource "aws_secretsmanager_secret_version" "db_secret_version" {
     password = random_password.db_password.result
   })
 }
+
 resource "aws_secretsmanager_secret" "db_user" {
-  name                    = "ecommerce-db-user"
+  name                    = "${var.environment}-db-user"
   recovery_window_in_days = 0
 }
 
@@ -27,7 +28,7 @@ resource "aws_secretsmanager_secret_version" "db_user_version" {
 }
 
 resource "aws_secretsmanager_secret" "db_pass" {
-  name                    = "ecommerce-db-pass"
+  name                    = "${var.environment}-db-pass"
   recovery_window_in_days = 0
 }
 
@@ -37,7 +38,7 @@ resource "aws_secretsmanager_secret_version" "db_pass_version" {
 }
 
 resource "aws_secretsmanager_secret" "db_name" {
-  name                    = "ecommerce-db-name"
+  name                    = "${var.environment}-db-name"
   recovery_window_in_days = 0
 }
 
@@ -47,39 +48,42 @@ resource "aws_secretsmanager_secret_version" "db_name_version" {
 }
 
 resource "aws_secretsmanager_secret" "db_connection" {
-  name                    = "ecommerce-db-connection"
+  name                    = "${var.environment}-db-connection"
   recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "db_connection_version" {
   depends_on = [aws_db_instance.this]
+
   secret_id = aws_secretsmanager_secret.db_connection.id
 
   secret_string = "server=${aws_db_instance.this.address};port=3306;database=${var.db_name};user=${var.db_username};password=${random_password.db_password.result}"
 }
+
 resource "aws_secretsmanager_secret" "db_host" {
-  name                    = "ecommerce-db-host"
+  name                    = "${var.environment}-db-host"
   recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "db_host_version" {
   depends_on = [aws_db_instance.this]
+
   secret_id     = aws_secretsmanager_secret.db_host.id
   secret_string = aws_db_instance.this.address
 }
 
 resource "aws_db_subnet_group" "this" {
-  name = "ecommerce-db-subnet-group"
+  name = "${var.environment}-db-subnet-group"
 
   subnet_ids = var.private_subnet_ids
 
   tags = {
-    Name = "ecommerce-db-subnet-group"
+    Name = "${var.environment}-db-subnet-group"
   }
 }
 
 resource "aws_security_group" "rds_sg" {
-  name        = "ecommerce-rds-sg"
+  name        = "${var.environment}-rds-sg"
   description = "Allow MySQL access"
   vpc_id      = var.vpc_id
 
@@ -96,10 +100,14 @@ resource "aws_security_group" "rds_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "${var.environment}-rds-sg"
+  }
 }
 
 resource "aws_db_instance" "this" {
-  identifier = "ecommerce-db"
+  identifier = "${var.environment}-db"
 
   allocated_storage = 20
 
@@ -132,6 +140,6 @@ resource "aws_db_instance" "this" {
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
 
   tags = {
-    Name = "ecommerce-db"
+    Name = "${var.environment}-db"
   }
 }

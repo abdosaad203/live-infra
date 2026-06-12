@@ -1,5 +1,4 @@
 terraform {
-
   required_version = ">= 1.5.0"
 
   required_providers {
@@ -9,19 +8,26 @@ terraform {
       version = "~> 5.0"
     }
 
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.30"
-    }
-
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.13"
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
     }
 
     tls = {
       source  = "hashicorp/tls"
       version = "~> 4.0"
+    }
+
+    local = {
+      source = "hashicorp/local"
+    }
+
+    null = {
+      source = "hashicorp/null"
+    }
+
+    time = {
+      source = "hashicorp/time"
     }
   }
 }

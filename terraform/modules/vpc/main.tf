@@ -23,8 +23,12 @@ resource "aws_subnet" "public_1" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name                     = "public-subnet-1"
+    Name = "public-subnet-1"
+
     "kubernetes.io/role/elb" = "1"
+
+    "kubernetes.io/cluster/staging-cluster"    = "shared"
+    "kubernetes.io/cluster/production-cluster" = "shared"
   }
 }
 
@@ -35,8 +39,12 @@ resource "aws_subnet" "public_2" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name                     = "public-subnet-2"
+    Name = "public-subnet-2"
+
     "kubernetes.io/role/elb" = "1"
+
+    "kubernetes.io/cluster/staging-cluster"    = "shared"
+    "kubernetes.io/cluster/production-cluster" = "shared"
   }
 }
 
@@ -47,6 +55,11 @@ resource "aws_subnet" "private_1" {
 
   tags = {
     Name = "private-subnet-1"
+
+    "kubernetes.io/role/internal-elb" = "1"
+
+    "kubernetes.io/cluster/staging-cluster"    = "shared"
+    "kubernetes.io/cluster/production-cluster" = "shared"
   }
 }
 
@@ -57,11 +70,20 @@ resource "aws_subnet" "private_2" {
 
   tags = {
     Name = "private-subnet-2"
+
+    "kubernetes.io/role/internal-elb" = "1"
+
+    "kubernetes.io/cluster/staging-cluster"    = "shared"
+    "kubernetes.io/cluster/production-cluster" = "shared"
   }
 }
 
 resource "aws_eip" "nat_eip" {
   domain = "vpc"
+
+  tags = {
+    Name = "ecommerce-nat-eip"
+  }
 }
 
 resource "aws_nat_gateway" "nat" {
