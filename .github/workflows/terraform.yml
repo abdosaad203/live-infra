@@ -29,9 +29,7 @@ jobs:
 
   terraform:
 
-    runs-on:
-      - self-hosted
-      - linux
+    runs-on: ubuntu-latest
 
     defaults:
       run:
