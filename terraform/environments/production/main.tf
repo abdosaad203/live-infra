@@ -100,7 +100,7 @@ module "addons" {
 module "rds" {
   source = "../../modules/rds"
 
-  environment = "production"
+  environment         = "production"
   deletion_protection = true
 
   vpc_id = data.terraform_remote_state.shared.outputs.vpc_id

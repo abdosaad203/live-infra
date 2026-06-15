@@ -124,9 +124,9 @@ resource "aws_db_instance" "this" {
 
   storage_encrypted = true
 
-  backup_retention_period = 7
+  backup_retention_period = 0
 
-  deletion_protection = var.deletion_protection
+  deletion_protection = false
 
   enabled_cloudwatch_logs_exports = [
     "error",
@@ -134,8 +134,7 @@ resource "aws_db_instance" "this" {
     "slowquery"
   ]
 
-  skip_final_snapshot       = false
-  final_snapshot_identifier = "${var.environment}-final-snapshot"
+  skip_final_snapshot = true
 
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
