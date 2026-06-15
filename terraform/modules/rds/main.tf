@@ -126,7 +126,7 @@ resource "aws_db_instance" "this" {
 
   backup_retention_period = 7
 
-  deletion_protection = true
+  deletion_protection = var.deletion_protection
 
   enabled_cloudwatch_logs_exports = [
     "error",
