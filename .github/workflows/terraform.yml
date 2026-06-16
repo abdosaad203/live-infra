@@ -68,6 +68,32 @@ jobs:
         if: github.event.inputs.action == 'apply'
         run: terraform apply -auto-approve
 
+      - name: Configure kubectl
+        if: github.event.inputs.action == 'apply' && github.event.inputs.environment != 'shared'
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name ${{ github.event.inputs.environment }}-cluster
+
+      - name: Wait for ArgoCD
+        if: github.event.inputs.action == 'apply' && github.event.inputs.environment != 'shared'
+        run: |
+          kubectl wait \
+            --for=condition=available \
+            deployment/argocd-server \
+            -n argocd \
+            --timeout=300s
+
+      - name: Bootstrap ArgoCD
+        if: github.event.inputs.action == 'apply' && github.event.inputs.environment != 'shared'
+        run: |
+          kubectl apply -f \
+          https://raw.githubusercontent.com/abdosaad203/ecommerce-gitops/main/argo-apps/bootstrap/${{ github.event.inputs.environment }}-root.yaml
+
+          kubectl get application \
+            ${{ github.event.inputs.environment }}-root \
+            -n argocd
+
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
         run: terraform destroy -auto-approve
