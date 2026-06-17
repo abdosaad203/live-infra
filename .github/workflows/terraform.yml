@@ -61,6 +61,16 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Run tfsec
+        continue-on-error: true
+        uses: aquasecurity/tfsec-action@v1.0.3
+
+      - name: Run Checkov
+        continue-on-error: true
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform
+
       - name: Terraform Plan
         run: terraform plan
 
